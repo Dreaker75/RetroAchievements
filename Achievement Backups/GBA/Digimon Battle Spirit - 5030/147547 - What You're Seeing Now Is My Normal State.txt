@@ -1,0 +1,1 @@
+{"ID":147547,"MemAddr":"0xH002310=12_0xH00231f!=0_0xH00231a!=11_N:0xH002310=7_N:0xH01977b=5_P:0xS019719=1.1.SR:0xH002310=3","Title":"What You're Seeing Now Is My Normal State","Description":"Complete 1P mode without digivolving on normal difficulty or above (No Impmon)","Points":25,"Author":"tatoonie","Modified":1619055798,"Created":1616992380,"BadgeName":"167679","Flags":3}

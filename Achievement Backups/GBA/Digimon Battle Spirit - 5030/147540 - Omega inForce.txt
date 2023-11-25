@@ -1,0 +1,1 @@
+{"ID":147540,"MemAddr":"0xH002310=8_0xH01988e=0_0xH019776>=20_0xH00231f!=0","Title":"Omega inForce","Description":"Win a match without letting your opponent get a single red orb and getting at least 20 blue orbs on normal difficulty or above","Points":10,"Author":"tatoonie","Modified":1618645470,"Created":1616992361,"BadgeName":"167675","Flags":3}

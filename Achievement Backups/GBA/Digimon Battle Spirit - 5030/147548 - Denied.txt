@@ -1,0 +1,1 @@
+{"ID":147548,"MemAddr":"0xH002310=12_0xH00231f!=0_N:0xH002310=7_N:0xH019893=5_P:0xS019831=1.1.SR:0xH002310=3","Title":"Denied","Description":"Complete 1P mode without letting the CPU digivolve on normal difficulty or above","Points":25,"Author":"tatoonie","Modified":1619055801,"Created":1616992383,"BadgeName":"167680","Flags":3}

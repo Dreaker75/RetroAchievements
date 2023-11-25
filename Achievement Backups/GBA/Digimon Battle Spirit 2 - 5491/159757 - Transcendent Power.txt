@@ -1,0 +1,1 @@
+{"ID":159757,"MemAddr":"0xH000d50=8_0x 039ac2>=40_0x 039c02=0","Title":"Transcendent Power","Description":"Win a match without letting the opponent get a single red orb and getting at least 40 orbs on normal difficulty or higher","Points":25,"Author":"tatoonie","Modified":1624364467,"Created":1624364467,"BadgeName":"179495","Flags":3}
