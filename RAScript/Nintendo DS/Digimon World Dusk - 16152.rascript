@@ -4701,7 +4701,7 @@ create_treasure_achievement("HighlightHaven", 3, "Open all treasure chests in ")
 create_digimon_achievement("Fake Agumon Expert", "Register 100 Digimon in the Digimon Gallery", 5, 100)
 create_digimon_achievement("Terriermon Assitant", "Register 200 Digimon in the Digimon Gallery", 10, 200)
 create_digimon_achievement("Agumon Expert", "Register 300 Digimon in the Digimon Gallery", 10, 300)
-create_digimon_achievement("Digimon Researcher Kogure", "Register all 367 available Digimon in the Digimon Gallery", 25, 367)
+create_digimon_achievement("Digimon Researcher Kogure", "Register all 370 available Digimon in the Digimon Gallery", 25, 370)
 create_digimon_achievement("[Special] Researcher of the World of Dawn", "Register all 27 Digimon usually unavailable in Dusk in the Digimon Gallery", 10, 27, "Trade")
 
 create_free_trial_achievement("Balance", ["Gaomon", "Solarmon", "MachGaogamon", "Clockmon"])
