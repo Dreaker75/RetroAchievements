@@ -1870,7 +1870,7 @@ quest_list = {
     "union8" : {"ID":0x0007,"Last Step":bit6(0x139FE9),"Reward Claimed":bit7(0x139FE9), "Name":"Search the DigiArea"},
     "union9" : {"ID":0x0008,"Last Step":bit2(0x139FEC),"Reward Claimed":bit3(0x139FEC), "Name":"Merchant of Death"},
     "union10" : {"ID":0x0009,"Last Step":bit6(0x139FEE),"Reward Claimed":bit7(0x139FEE), "Name":"The Final Battle"},
-    "union11" : {"ID":0x000a,"Last Step":bit2(0x139FF1),"Reward Claimed":bit3(0x139FF1)},
+    "union11" : {"ID":0x000a,"Last Step":bit2(0x139FF1),"Reward Claimed":bit3(0x139FF1), "Name":"Gaia Origin Challenge"},
     "union12" : {"ID":0x000b,"Last Step":bit6(0x139FF3),"Reward Claimed":bit7(0x139FF3), "Name":"The Legendary Tamer"},
     "holy1" : {"ID":0x0018,"Last Step":bit6(0x13A01B),"Reward Claimed":bit7(0x13A01B)},
     "holy2" : {"ID":0x0019,"Last Step":bit0(0x13A01D),"Reward Claimed":bit1(0x13A01D)},
@@ -4289,29 +4289,36 @@ function bosses_defeated(bosses_ids, add_trigger) {
     return in_battle() && __ornext(delta_check) && logic_check
 }
 
-function giant_boss_defeated(boss_id, trigger = false) {
+// Checks if the passed in Digimon is one of the enemies
+function check_enemy_digimon(digimon_to_check) {
+    logic_check = always_false()
+    for i in range(0, 4) {
+        logic_check = logic_check || (word(first_enemy_digimon + enemy_digimon_info_offsets["Next Digimon"] * i + enemy_digimon_info_offsets["ID"]) == digimon_to_check)
+    }
+    return logic_check
+}
+
+function giant_boss_defeated(boss_id, trigger = false, first_boss = 0xffff) {
     // For giant bosses, the first and third enemies are extensions of the main body and don't actually have hp (it's set to 0xFFFFFFFF)
     //  The HP for the boss is stored in the middle zone, which correlates to the second enemy Digimon
     enemy = first_enemy_digimon + enemy_digimon_info_offsets["Next Digimon"]
     enemyID = enemy + enemy_digimon_info_offsets["ID"]
     enemyHP = enemy_hp_graphic_data[1]
-    if (trigger == true)
-        return in_battle() && trigger_when(prev(enemyHP) > 0 && enemyHP == 0 && word(enemyID) == boss_id )
+    if (trigger == true){
+        if (first_boss == 0xffff){
+            return in_battle() && word(enemyID) == boss_id && prev(enemyHP) > 0 && trigger_when(enemyHP == 0)
+        }
+        else {
+            return once(in_battle() && check_enemy_digimon(first_boss)) && trigger_when(prev(enemyHP) > 0 && enemyHP == 0 && word(enemyID) == boss_id)
+        }
+    }
     else
         return in_battle() && word(enemyID) == boss_id && prev(enemyHP) > 0 && enemyHP == 0
 }
 
-function gaia_origin_defeated(add_trigger = false){
-    logic = story_checkpoints["Gaia Origin Defeated"] == 0 && scan_data_obtainable() == 0x00
-    for i in range(0, length(gaia_origin_ids) - 1) {
-        if (add_trigger == true) {
-            logic = logic && trigger_when(once(bosses_defeated(gaia_origin_ids[i], false)))
-        }
-        else {
-            logic = logic && once(bosses_defeated(gaia_origin_ids[i], false))
-        }
-    }
-    return logic
+function gaia_origin_defeated(){
+    logic = story_checkpoints["Gaia Origin Defeated"] == 0 && trigger_when(scan_data_obtainable() == 0x00)
+    return logic && once(in_battle() && check_enemy_digimon(gaia_origin_ids[0][0])) && trigger_when(bosses_defeated(gaia_origin_ids[length(gaia_origin_ids) - 1], false))
 }
 
 function stat_limits(amount) {
@@ -4325,24 +4332,33 @@ function stat_limits(amount) {
     return logic
 }
 
-function digimon_in_party(digimon_ids) {
+// check_once is for when specific party is required in a boss rush, so the trigger icon displays properly
+function digimon_in_party(digimon_ids, check_once = false) {
     logic = always_true()
     // Needed to be able to check that multiple different Digimon are in the player's party (First check if Digimon 1 is anywhere in the party and && it to the rest of the logic, then do the same for Digimon 2, etc)
     single_digimon_logic = always_false()
 
-    // First loop to check for each Digimon
+    // First, loop to check for each Digimon
     for i in range (0, length(digimon_ids) - 1) {
         single_digimon_logic = always_false()
-        // Second loop to check for each party slot, which should always be the same as the number of Digimon, as they're filled in order
+        // Then, loop to check for each party slot, which should always be the same as the number of Digimon, as they're filled in order
         for j in range (0, length(digimon_ids) - 1) {
             single_digimon_logic = single_digimon_logic || word(first_party_digimon_inbattle + party_digimon_inbattle_offsets["ID"] + party_digimon_inbattle_offsets["Next Digimon"] * j) == digimon_ids[i]
+        }
+        if(check_once == true){
+            single_digimon_logic = once(single_digimon_logic)
         }
         logic = logic && single_digimon_logic
     }
 
     // If the achievement doesn't ask for a full party, make sure the rest of the slots are empty. Checking the next one in line is enough, since they're populated in order
-    if (length(digimon_ids) < 6)
-        logic = logic && byte(first_party_digimon_inbattle + party_digimon_inbattle_offsets["Next Digimon"] * length(digimon_ids)) == 0xff
+    if (length(digimon_ids) < 6){
+        if(check_once == true){
+            logic = logic && once(in_battle() && byte(first_party_digimon_inbattle + party_digimon_inbattle_offsets["Next Digimon"] * length(digimon_ids)) == 0xff)
+        }
+        else
+            logic = logic && (in_battle() && byte(first_party_digimon_inbattle + party_digimon_inbattle_offsets["Next Digimon"] * length(digimon_ids)) == 0xff)
+    }
 
     return logic
 }
@@ -4541,12 +4557,12 @@ function create_boss_no_item_challenge_achievement(title, description, points, b
     achievement(title, description, points, (save_protection() && scan_data_obtainable() == 0x00 && bosses_defeated(boss_digimon, true) && no_items_in_battle()) && reset_in_alt(current_screen_ID() != boss_area))
 }
 
-function create_giant_boss_no_item_challenge_achievement(title, description, points, boss_digimon, boss_area) {
-    achievement(title, description, points, (save_protection() && scan_data_obtainable() == 0x00 && giant_boss_defeated(boss_digimon, true) && no_items_in_battle()) && reset_in_alt(current_screen_ID() != boss_area))
+function create_giant_boss_no_item_challenge_achievement(title, description, points, boss_digimon, boss_area, first_boss_digimon = 0xffff) {
+    achievement(title, description, points, (save_protection() && scan_data_obtainable() == 0x00 && giant_boss_defeated(boss_digimon, true, first_boss_digimon) && no_items_in_battle()) && reset_in_alt(current_screen_ID() != boss_area))
 }
 
-function create_gaia_origin_achievement(title, description, points, extra_logic = always_true(), add_trigger = false) {
-    achievement(title, description, points, save_protection() && gaia_origin_defeated(add_trigger == true) && extra_logic && reset_in_alt(current_screen_ID() != 0x1e3)) // Transfield boss area
+function create_gaia_origin_achievement(title, description, points, extra_logic = always_true()) {
+    achievement(title, description, points, save_protection() && gaia_origin_defeated() && extra_logic && reset_in_alt(current_screen_ID() != boss_areas["Transfield Boss Area"]))
 }
 
 function create_solo_win_achievement(title, description, points, target_digimon, own_digimon) {
@@ -4582,6 +4598,7 @@ create_story_achievement("A Dicy Meeting", 10, 8)
 create_story_achievement("Yesterday's Enemies are Today's Allies", 10, 9)
 create_game_beaten_achievement("Harmony Restored")
 create_game_beaten_achievement("I feel like I'm forgetting something... [m]", " without claiming your Digi-Farm", true, !digifarm_claimed())
+create_story_achievement("Prove your worth", 10, 11)
 
 create_quest_achievement("Rookie Helper", "Completed 12 Quests", 5, 12)
 create_quest_achievement("Friend of Digimon", "Completed 24 Quests", 5, 24)
@@ -4623,11 +4640,10 @@ create_giant_boss_no_item_challenge_achievement("Following the Path of the Samur
 create_boss_no_item_challenge_achievement("The Misled Archangel [m]", "Defeat Ophanimon [No items in battle]", 10, [boss_digimon_ids["Ophanimon"]], boss_areas["AccessGlacier Boss Area"])
 create_giant_boss_no_item_challenge_achievement("The King of Vampires, Dethroned [m]", "Defeat GranDracmon [No items in battle]", 10, boss_digimon_ids["GranDracmon"], boss_areas["Proxy Island Boss Area"])
 create_giant_boss_no_item_challenge_achievement("The Corrupted Gallant Knight [m]", "Defeat ChaosGallantmon Core [No items in battle]", 10, boss_digimon_ids["ChaosGallantmonC"], boss_areas["Darkmoon City Union Room"])
-create_giant_boss_no_item_challenge_achievement("The Real Master of Evolution [m]", "Defeat all of the final boss' forms [No items in battle]", 10, boss_digimon_ids["ExoGrimmon"], boss_areas["Chaos Brain Boss Area"])
+create_giant_boss_no_item_challenge_achievement("The Real Master of Evolution [m]", "Defeat all of the final boss' forms [No items in battle]", 10, boss_digimon_ids["ExoGrimmon"], boss_areas["Chaos Brain Boss Area"], boss_digimon_ids["ChaosGrimmon"])
 
-create_gaia_origin_achievement("Prove your worth", "Defeat the Gaia Origin", 10)
-create_gaia_origin_achievement("Fighting fair and square [m]", "Defeat the Gaia Origin [HP/MP <= 5500, Stats <= 550, No items in battle]", 25, no_items_in_battle() && unless(once(!stat_limits(550) && in_battle())) && reset_in_alt(current_screen_ID() != prev(current_screen_ID())), true)
-create_gaia_origin_achievement("Light Fang's Strongest Tamer [m]", "Defeat the Gaia Origin with only Apollomon, Seraphimon and ShineGreymon (Burst Mode) in your party", 10, digimon_in_party([digimon_ids["Apollomon"], digimon_ids["Seraphimon"], digimon_ids["ShineGreymonBM"]]) && reset_in_alt(current_screen_ID() != prev(current_screen_ID())), true)
+create_gaia_origin_achievement("Fighting fair and square [m]", "Defeat the Gaia Origin [HP/MP <= 5500, Stats <= 550, No items in battle]", 25, no_items_in_battle() && unless(once(!stat_limits(550) && in_battle())) && reset_in_alt(current_screen_ID() != prev(current_screen_ID())))
+create_gaia_origin_achievement("Light Fang's Strongest Tamer [m]", "Defeat the Gaia Origin with only Apollomon, Seraphimon and ShineGreymon (Burst Mode) in your party", 10, digimon_in_party([digimon_ids["Apollomon"], digimon_ids["Seraphimon"], digimon_ids["ShineGreymonBM"]], true) && reset_in_alt(current_screen_ID() != prev(current_screen_ID())))
 
 achievement("Best of the best... almost!", "Achieve Platinum Tamer Rank", 10, save_protection() && tamer_rank() == tamer_ranks["Platinum"] && prev(tamer_rank()) == tamer_ranks["Platinum"] - 1)
 create_story_achievement("[Special] The Birth of a New Legend", 10, 12)
