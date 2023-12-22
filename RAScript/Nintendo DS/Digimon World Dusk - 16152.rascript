@@ -1,6 +1,85 @@
 // Digimon World Dusk
 // #ID = 16152
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// GENERIC FUNCTIONS
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+function reset_in_alt(reset_condition) {
+    return (always_false() || never(reset_condition))
+}
+
+function is_static_value_in_array(array, value){
+    for element in array {
+        if(element == value){
+            return true
+        }
+    }
+    return false
+}
+
+function is_runtime_value_in_array(array, address){
+    logic = always_false()
+    for element in array {
+        logic = logic || address == element
+    }
+    return __ornext(logic)
+}
+
+function list_array_contents(array, delimitator = ", "){
+    values = ""
+    for i in range (0, length(array) - 1) {
+        values = values + array[i]
+        if (i < length(array) - 1){
+            values = values + delimitator
+        }
+    }
+    return values
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// END OF GENERIC FUNCTIONS
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// $0F5578: Attacks Information
+//          Each attack takes up 28 bytes
+//          Charge [28 bytes]
+//          ID [16 bits]
+first_attack_address = 0x0f5578
+attack_info_offsets = {
+    "ID": 0x0,
+    "MP": 0x2,
+    "Type": 0x4,
+    "Power": 0x8,
+    "Level": 0x18,
+    "Next Attack": 0x1c,
+}
+
+// $0F557A: MP [16 bits]
+// $0F557C: Type [16 bits]
+//          0x0 = Holy
+//          0x1 = Dark
+//          0x2 = Fire
+//          0x3 = Earth
+//          0x4 = Wind
+//          0x5 = Steel/Energy
+//          0x6 = Water
+//          0x7 = Thunder
+type_ids = {
+    "Holy": 0x0,
+    "Dark": 0x1,
+    "Fire": 0x2,
+    "Earth": 0x3,
+    "Wind": 0x4,
+    "Steel": 0x5,
+    "Water": 0x6,
+    "Thunder": 0x7,
+}
+
+// $0F5580: Power [16 bits]
+// $0F558B: Range
+//          Bits 0-4
+//          Each bit corresponds to a zone in the battle, with bit4 being the left most and bit0 being the right most
+// $0F5590: Level [16 bits]
 // $135BBC: First Unique ID Generated [32 bits]
 // $135BC0: Player Name (2 bytes per letter, 12 bytes, with last one being FFFF to mark the end of the string)
 name_first_letter = 0x135BC0
@@ -23,6 +102,7 @@ digimon_stats_offsets = {
     "Def": 0x4A,
     "Spt": 0x4C,
     "Spd": 0x4E,
+    "Aptitude":0x52,
     "Move 1": 0x54,
     "Move 2": 0x56,
     "Move 3": 0x58,
@@ -3351,8 +3431,8 @@ treasure_chests = {
     "Palette Amazon":[bit0(0x13A391), bit1(0x13A391), bit2(0x13A391), bit4(0x13A391), bit6(0x13A391), bit7(0x13A391), bit5(0x13A3A7), bit6(0x13A3A7), bit0(0x13A3A8), bit3(0x13A3A8), bit4(0x13A3A8), bit6(0x13A3A8)],
     "AccessGlacier":[bit6(0x13A394), bit0(0x13A395), bit4(0x13A395), bit6(0x13A395), bit7(0x13A395), bit5(0x13A3AB), bit6(0x13A3AB), bit7(0x13A3AB), bit0(0x13A3AC), bit2(0x13A3AC), bit5(0x13A3AC), bit7(0x13A3AC)],
     "Macro Sea":[bit4(0x13A396), bit7(0x13A396), bit0(0x13A3AD), bit2(0x13A3AD), bit4(0x13A3AD)],
-    "ProcessFactory":[bit6(0x13A393), bit0(0x13A394), bit3(0x13A394), bit4(0x13A394), bit2(0x13A3AA), bit7(0x13A3AA)],
-    "Proxy Island":[bit6(0x13A397), bit1(0x13A398), bit3(0x13A398), bit4(0x13A398), bit7(0x13A3AD), bit0(0x13A3AE), bit2(0x13A3AE), bit3(0x13A3AE), bit4(0x13A3AE), bit1(0x13A3AB), bit3(0x13A3AB)],
+    "ProcessFactory":[bit6(0x13A393), bit0(0x13A394), bit3(0x13A394), bit4(0x13A394), bit2(0x13A3AA), bit7(0x13A3AA), bit1(0x13A3AB), bit3(0x13A3AB)],
+    "Proxy Island":[bit6(0x13A397), bit1(0x13A398), bit3(0x13A398), bit4(0x13A398), bit7(0x13A3AD), bit0(0x13A3AE), bit2(0x13A3AE), bit3(0x13A3AE), bit4(0x13A3AE)],
     "Chaos Brain":[bit3(0x13A39B), bit7(0x13A39B), bit0(0x13A39C), bit1(0x13A39C), bit6(0x13A39C), bit5(0x13A3B1), bit4(0x13A3B2), bit5(0x13A3B2)],
     "Transfield":[bit0(0x13A39D), bit3(0x13A39D), bit4(0x13A39D), bit5(0x13A39D), bit6(0x13A39D), bit1(0x13A39E), bit5(0x13A39E), bit1(0x13A3B3)],
     "HighlightHaven":[bit1(0x13A399), bit3(0x13A399), bit1(0x13A3AF), bit3(0x13A3AF), bit6(0x13A3AF), bit7(0x13A3AF), bit1(0x13A3B0)],
@@ -3849,6 +3929,20 @@ enemy_hp_graphic_data = [
     dword(0x256D50),
 ]
 
+// $256D68: Battle State
+//          0x00 = Loading
+//          0x01 = Player's turn
+//          0x03 = Transitioning back from Move
+//          0x04 = Player choosing (Attack/Defend/etc targetting)
+//          0x07 = Transitioning to target choice
+//          0x8b -> 0x81 -> 0x80 = Enemy turn, attacking
+//          0x0b = Advancing turn
+
+// $256D69: Active Digimon in battle
+//          0x00-0x05 = Player Digimon (same order as the in-battle info)
+//          0x06-0x0b = Enemy slots?
+function active_digimon_in_battle() => byte(0x256D69)
+
 // $256D90: In-Battle Pointer? [32 bits]
 //          Seems to be the pointer to graphics, could not find the one for data
 //          0x00000000 = Not in battle
@@ -3861,15 +3955,18 @@ function in_battle() => dword(0x256D90) == 0x02166c00
 //          0xff = No 1st Digimon in party (Will never actually happen in reality)
 first_party_digimon_inbattle = 0x25A698
 party_digimon_inbattle_offsets = {
+    "Unique ID": 0x4,
     "ID": 0x8,
     "Curr HP": 0x14,
     "Max HP": 0x18,
     "Max MP": 0x20,
+    "Technique 1": 0x24,
     "Attack": 0x68,
     "Defense": 0x6E,
     "Spirit": 0x74,
     "Speed": 0x7A,
     "Next Digimon": 0xD8,
+    "Technique Offset": 0x6,
 }
 
 // $25A69C: Unique ID [32 bits]
@@ -3878,6 +3975,11 @@ party_digimon_inbattle_offsets = {
 // $25A6B0: Max HP [32 bits]
 // $25A6B4: Current MP [32 bits]
 // $25A6B8: Max MP [32 bits]
+// $25A6BC: 1st Technique ID [16 bits]
+// $25A6C2: 2nd Technique ID [16 bits]
+// $25A6C8: 3rd Technique ID [16 bits]
+// $25A6CE: 4th Technique ID [16 bits]
+// $25A6D4: Signature Technique ID [16 bits]
 // $25A6FC: Earth Resistance? [16 bits]
 //          This one is weird, because it starts at 0x00ff but transform into another number when hit by an Earth-resistance down move only. The Modification field next to this works as normal
 // $25A700: Attack Stat [16 bits] (Includes equipment stats)
@@ -4173,6 +4275,8 @@ boss_digimon_ids = {
 //          0x00 = 1st item/Attack/etc
 //          0x01 = 2nd Item/Attack/etc
 //          ...
+function in_battle_submenu_id() => byte(0x25E289)
+
 // $25E28A: In-Battle Digimon target selection
 //          A corresponding bit turns on depending on who the attack/item/etc targets. If it targets more than 1 Digimon at the same time, both bits will turn on.
 //          Works for both enemy Digimon and player's Digimon
@@ -4188,6 +4292,15 @@ boss_digimon_ids = {
 //          0x23 = Flee selected
 //          0x24 = Accepted (Attack confirmed/Item used/etc)
 //          0x25 = Cacnelled
+function in_battle_selection_state() => byte(0x25E298)
+fight_state = 0x1f
+move_state = 0x20
+item_state = 0x21
+defend_state = 0x22
+flee_state = 0x23
+accepted_state = 0x24
+cancelled_state = 0x25
+
 // $25EB50: Experience points from 1st Digimon [32 bits]
 // $25EB54: Experience points from 2nd Digimon [32 bits]
 // $25EB58: Experience points from 3rd Digimon [32 bits]
@@ -4285,10 +4398,6 @@ function save_protection(){
     return __ornext(game_state() == 0xffff || prev(game_state()) == 0xffff)
 }
 
-function reset_in_alt(reset_condition) {
-    return (always_false() || never(reset_condition))
-}
-
 function game_beaten() {
     return story_checkpoints["Game Beaten"] > prev(story_checkpoints["Game Beaten"])
 }
@@ -4350,16 +4459,36 @@ function count_digimon(digimon_to_count, digimon_to_check = "In-Game", type = "o
     return digimon_count
 }
 
-function no_deaths_in_battle() {
+// boss_id is for when a giant boss has a mini-boss fight before them, so the limitations apply only to the boss
+function no_deaths_in_battle(boss_id = 0xffff) {
     logic = always_true()
 
     for i in range (0, 5) {
         current_digimon = first_party_digimon_inbattle + party_digimon_inbattle_offsets["Next Digimon"] * i
-        // We need to check if there is a Digimon in the current slot first before we check if someone has died, which is what the 0xff comparison is for
-        logic = logic && disable_when(in_battle() && scan_data_obtainable() == 0x00 && byte(current_digimon) != 0xff && dword(current_digimon + party_digimon_inbattle_offsets["Curr HP"]) == 0)
+        if(boss_id == 0xffff){
+            // We need to check if there is a Digimon in the current slot first before we check if someone has died, which is what the 0xff comparison is for
+            logic = logic && disable_when(in_battle() && scan_data_obtainable() == 0x00 && byte(current_digimon) != 0xff && dword(current_digimon + party_digimon_inbattle_offsets["Curr HP"]) == 0)
+        }
+        else {
+        // Check the second Digimon because that's the main part for giant Digimon
+        enemyID = first_enemy_digimon + enemy_digimon_info_offsets["Next Digimon"] + enemy_digimon_info_offsets["ID"]
+            logic = logic && disable_when(in_battle() && scan_data_obtainable() == 0x00 && word(enemyID) == boss_id && byte(current_digimon) != 0xff && dword(current_digimon + party_digimon_inbattle_offsets["Curr HP"]) == 0)
+        }
     }
 
     return logic
+}
+
+// boss_id is for when a giant boss has a mini-boss fight before them, so the limitations don't apply to that fight
+function no_items_in_battle(boss_id = 0xffff) {
+    if (boss_id == 0xffff){
+        return disable_when(in_battle() && scan_data_obtainable() == 0x00 && prev(in_battle_selection_state()) == item_state && in_battle_selection_state() == accepted_state)
+    }
+    else {
+        // Check the second Digimon because that's the main part for giant Digimon
+        enemyID = first_enemy_digimon + enemy_digimon_info_offsets["Next Digimon"] + enemy_digimon_info_offsets["ID"]
+        return disable_when(in_battle() && scan_data_obtainable() == 0x00 && word(enemyID) == boss_id && prev(in_battle_selection_state()) == item_state && in_battle_selection_state() == accepted_state)
+    }
 }
 
 function bosses_defeated(bosses_ids, add_trigger) {
@@ -4412,15 +4541,35 @@ function gaia_origin_defeated(){
     return logic && once(in_battle() && check_enemy_digimon(gaia_origin_ids[0][0])) && trigger_when(bosses_defeated(gaia_origin_ids[length(gaia_origin_ids) - 1], false))
 }
 
-function stat_limits(amount) {
+function stat_limits(amount, hp_mp_stats, atk_def_spt_spd_stats) {
     logic = always_true()
 
     for i in range (0, 5) {
         current_digimon = first_party_digimon_inbattle + party_digimon_inbattle_offsets["Next Digimon"] * i
-        logic = logic && (dword(current_digimon + party_digimon_inbattle_offsets["Max HP"]) <= amount * 10 && dword(current_digimon + party_digimon_inbattle_offsets["Max MP"]) <= amount * 10 && word(current_digimon + party_digimon_inbattle_offsets["Attack"]) <= amount && word(current_digimon + party_digimon_inbattle_offsets["Defense"]) <= amount && word(current_digimon + party_digimon_inbattle_offsets["Spirit"]) <= amount && word(current_digimon + party_digimon_inbattle_offsets["Speed"]) <= amount)
+        for element in hp_mp_stats {
+            logic = logic && dword(current_digimon + party_digimon_inbattle_offsets["Max " + element]) <= amount * 10
+        }
+        for element in atk_def_spt_spd_stats {
+            logic = logic && word(current_digimon + party_digimon_inbattle_offsets[element]) <= amount
+        }
     }
 
     return logic
+}
+
+function check_technique_type_used(types){
+    //// Check which Digimon is the one attacking (In battle check happens before this)
+    //active_digimon = byte(first_party_digimon_inbattle + party_digimon_inbattle_offsets["Next Digimon"] * active_digimon_in_battle() + party_digimon_inbattle_offsets["Technique 1"])
+
+    //// Check what attack the Digimon used
+    //// TODO: Make sure the option was selected and not just hovered
+    //attack_used = active_digimon + word(party_digimon_inbattle_offsets["Technique Offset"] * in_battle_submenu_id())
+
+    //// TODO: Check what type the attack is
+    //type_address = word(first_attack_address + attack_info_offsets["Type"]) + attack_info_offsets["Next Attack"] * attack_used
+
+    //// Check if that type is part of the list of types passed in
+    //return is_runtime_value_in_array(types, attack_used)
 }
 
 // check_once is for when specific party is required in a boss rush, so the trigger icon displays properly
@@ -4434,7 +4583,7 @@ function digimon_in_party(digimon_ids, check_once = false) {
         single_digimon_logic = always_false()
         // Then, loop to check for each party slot, which should always be the same as the number of Digimon, as they're filled in order
         for j in range (0, length(digimon_ids) - 1) {
-            single_digimon_logic = single_digimon_logic || word(first_party_digimon_inbattle + party_digimon_inbattle_offsets["ID"] + party_digimon_inbattle_offsets["Next Digimon"] * j) == digimon_ids[i]
+            single_digimon_logic = __ornext(single_digimon_logic || word(first_party_digimon_inbattle + party_digimon_inbattle_offsets["ID"] + party_digimon_inbattle_offsets["Next Digimon"] * j) == digimon_ids[i])
         }
         if(check_once == true){
             single_digimon_logic = once(single_digimon_logic)
@@ -4469,47 +4618,41 @@ function digimon_defeated(digimon_id) {
 }
 
 function has_dna_evolved() {
-    // Because of how the DNA evolution works, the first enemy chosen will transform into the DNA objective after the DNA is performed, so we need to check the previous value when comparing to the result digimon so it compares the Digimon before it evolves
+    // Because of how the DNA evolution works, the first digimon chosen will transform into the DNA objective after the DNA is performed, so we need to check the previous value when comparing to the result digimon so it compares the Digimon before it evolves
     first_digimon_chosen = dword(base_dna_armor_digimon() + digimon_stats_offsets["Species ID"])
     
     // We substract the Digimon obtained from the first Digimon instead of comparing if they're equal so RATools generates the code correctly
-    return prev(first_digimon_chosen) - dna_armor_digimon_obtained() != 0 && first_digimon_chosen - dna_armor_digimon_obtained() == 0
+    // The last check to compare if the first Digimon pointer is the same is because it goes back to 0 for a few frames when backing out of a menu
+    return prev(first_digimon_chosen) - dna_armor_digimon_obtained() != 0 && first_digimon_chosen - dna_armor_digimon_obtained() == 0 && base_dna_armor_digimon() == prev(base_dna_armor_digimon())
 }
 
-function has_moves(digimon_address, move_list, move_obtainable_last) {
+function has_moves(digimon_address, target_digimon, move_list, last_move_obtainable) {
     prev_logic = always_false()
     logic = always_true()
-    moves_logic = []
-    moves_prev_logic = []
-    num_moves = length(move_list)
 
-    for i in range (0, num_moves - 1) {
-        if (num_moves > 4) {
-            array_push(moves_logic, word(digimon_address + digimon_stats_offsets["Move 1"]) == move_list[i] && word(digimon_address + digimon_stats_offsets["Move 2"]) == move_list[i] && word(digimon_address + digimon_stats_offsets["Move 3"]) == move_list[i] && word(digimon_address + digimon_stats_offsets["Move 4"]) == move_list[i] && never(dword(digimon_address) == 0))
-            if (move_obtainable_last == true) {
-                array_push(moves_prev_logic, prev(word(digimon_address + digimon_stats_offsets["Move 1"])) != move_list[i] && prev(word(digimon_address + digimon_stats_offsets["Move 2"])) != move_list[i] && prev(word(digimon_address + digimon_stats_offsets["Move 3"])) != move_list[i] && prev(word(digimon_address + digimon_stats_offsets["Move 4"])) != move_list[i])
-            }
-        }
-        else {
-            logic = logic && __ornext((word(digimon_address + digimon_stats_offsets["Move 1"]) == move_list[i] || word(digimon_address + digimon_stats_offsets["Move 2"]) == move_list[i] || word(digimon_address + digimon_stats_offsets["Move 3"]) == move_list[i] || word(digimon_address + digimon_stats_offsets["Move 4"]) == move_list[i]))
-            if (move_obtainable_last == true) {
-                array_push(moves_prev_logic, prev(word(digimon_address + digimon_stats_offsets["Move 1"])) != move_list[i] && prev(word(digimon_address + digimon_stats_offsets["Move 2"])) != move_list[i] && prev(word(digimon_address + digimon_stats_offsets["Move 3"])) != move_list[i] && prev(word(digimon_address + digimon_stats_offsets["Move 4"])) != move_list[i])
-            }
-        }
+    move1 = word(digimon_address + digimon_stats_offsets["Move 1"])
+    move2 = word(digimon_address + digimon_stats_offsets["Move 2"])
+    move3 = word(digimon_address + digimon_stats_offsets["Move 3"])
+    move4 = word(digimon_address + digimon_stats_offsets["Move 4"])
+
+    // Make sure the current Digimon is the target Digimon
+    logic = logic && word(digimon_address + digimon_stats_offsets["Species ID"]) == target_digimon
+    
+    // Check whether the Digimon has been evolved last frame. This can always be the last condition to change unless the achievement asks for 4 moves the Digimon can learn
+    prev_logic = prev_logic || prev(word(digimon_address + digimon_stats_offsets["Species ID"])) != target_digimon
+
+    // Check that all the moves in the move_list show up in any of the 4 move slots (Works as long as the achievement asks for exactly 4 attacks. For more moves the logic would have to be changed)    
+    for move in move_list {
+        logic = logic && __ornext(move == move1 || move == move2 || move == move3 || move == move4)
     }
 
-    if (num_moves > 4) {
-        if (move_obtainable_last == true)
-            return tally(1, moves_prev_logic[0], moves_prev_logic[1], moves_prev_logic[2], moves_prev_logic[3]) && logic
-        else
-            return tally(4, moves_logic)
+    // Delta check which move was obtained last, if applicable (Only applies to Susanoomon's Glory Thunder in Dusk). Add this check to the previous Digimon species check, as the move could be obtained from another Digimon and then evolved into the target Digimon
+    if (last_move_obtainable != 0xffff){
+        prev_logic = prev_logic || prev(move1) != last_move_obtainable && prev(move2) != last_move_obtainable && prev(move3) != last_move_obtainable && prev(move4) != last_move_obtainable
     }
-    else {
-        if (move_obtainable_last == true)
-            return tally(1, moves_prev_logic[0], moves_prev_logic[1], moves_prev_logic[2], moves_prev_logic[3]) && logic
-        else
-            return logic
-    }
+
+    // Return all the delta checks in an ornext chain (so it doesn't generate extra alt groups) and the logic
+    return __ornext(prev_logic) && logic
 }
 
 function check_digimon_owned(target_digimon) {
@@ -4535,13 +4678,12 @@ function check_digimon_owned(target_digimon) {
     return logic && delta_logic
 }
 
-function check_moveset(target_digimon, required_moveset, move_obtainable_last) {
+function check_moveset(target_digimon, required_moveset, last_move_obtainable) {
     logic = always_false()
 
     for i in range(0, 39) {
         current_digimon = first_digimon_address + digimon_stats_offsets["Next Digimon"] * i
-        current_digimon_species = current_digimon + digimon_stats_offsets["Species ID"]
-        logic = logic || (word(current_digimon_species) == target_digimon && prev(word(current_digimon_species)) != target_digimon && has_moves(current_digimon, required_moveset, move_obtainable_last))
+        logic = logic || has_moves(current_digimon, target_digimon, required_moveset, last_move_obtainable)
     }
 
     return logic
@@ -4570,7 +4712,7 @@ function check_all_digimon_max_stats() {
 
 function check_digimon_resistances(digimon_address, resistanceAmount) {
     return __ornext(prev(word(digimon_address + digimon_stats_offsets["Light"])) < resistanceAmount || prev(word(digimon_address + digimon_stats_offsets["Dark"])) < resistanceAmount || prev(word(digimon_address + digimon_stats_offsets["Fire"])) < resistanceAmount || prev(word(digimon_address + digimon_stats_offsets["Earth"])) < resistanceAmount || prev(word(digimon_address + digimon_stats_offsets["Wind"])) < resistanceAmount || prev(word(digimon_address + digimon_stats_offsets["Steel"])) < resistanceAmount || prev(word(digimon_address + digimon_stats_offsets["Water"])) < resistanceAmount || prev(word(digimon_address + digimon_stats_offsets["Thunder"])) < resistanceAmount) &&
-    word(digimon_address + digimon_stats_offsets["Light"]) == resistanceAmount && word(digimon_address + digimon_stats_offsets["Dark"]) == resistanceAmount && word(digimon_address + digimon_stats_offsets["Fire"]) == resistanceAmount && word(digimon_address + digimon_stats_offsets["Earth"]) == resistanceAmount && word(digimon_address + digimon_stats_offsets["Wind"]) == resistanceAmount && word(digimon_address + digimon_stats_offsets["Steel"]) == resistanceAmount && word(digimon_address + digimon_stats_offsets["Water"]) == resistanceAmount && word(digimon_address + digimon_stats_offsets["Thunder"]) == resistanceAmount
+    word(digimon_address + digimon_stats_offsets["Light"]) >= resistanceAmount && word(digimon_address + digimon_stats_offsets["Dark"]) >= resistanceAmount && word(digimon_address + digimon_stats_offsets["Fire"]) >= resistanceAmount && word(digimon_address + digimon_stats_offsets["Earth"]) >= resistanceAmount && word(digimon_address + digimon_stats_offsets["Wind"]) >= resistanceAmount && word(digimon_address + digimon_stats_offsets["Steel"]) >= resistanceAmount && word(digimon_address + digimon_stats_offsets["Water"]) >= resistanceAmount && word(digimon_address + digimon_stats_offsets["Thunder"]) >= resistanceAmount
 }
 
 function check_all_digimon_resistances(resistanceAmount) {
@@ -4624,11 +4766,8 @@ function create_story_achievement(title, points, quest_number) {
     achievement(title, format("Complete the \"{0}\" Quest", quest_to_check["Name"]), points, save_protection() && quest_to_check["Last Step"] == 1 && quest_to_check["Reward Claimed"] > prev(quest_to_check["Reward Claimed"]) && prev(active_quest()) == quest_to_check["ID"] && active_quest() == 0xffff)
 }
 
-function create_game_beaten_achievement(title, description = "", trigger = false, extra_logic = always_true()) {
-    if (trigger == false)
-        achievement(title, "Defeat the Final Boss and finish the game" + description, 25, save_protection() && game_beaten() && active_quest() == quest_list["union10"]["ID"] && extra_logic)
-    else
-        achievement(title, "Defeat the Final Boss and finish the game" + description, 25, save_protection() && trigger_when(game_beaten()) && active_quest() == quest_list["union10"]["ID"] && extra_logic)
+function create_game_beaten_achievement(title, description = "", extra_logic = always_true()) {
+    achievement(title, "Defeat the Final Boss and finish the game" + description, 25, save_protection() && game_beaten() && active_quest() == quest_list["union10"]["ID"] && extra_logic)
 }
 
 function create_quest_achievement(title, description, points, quest_target){
@@ -4652,11 +4791,17 @@ function create_boss_no_death_challenge_achievement(title, description, points, 
 }
 
 function create_giant_boss_no_death_challenge_achievement(title, description, points, boss_digimon, boss_area, first_boss_digimon = 0xffff) {
-    achievement(title, description, points, (save_protection() && scan_data_obtainable() == 0x00 && giant_boss_defeated(boss_digimon, true, first_boss_digimon) && no_deaths_in_battle()) && reset_in_alt(current_screen_ID() != boss_area))
+    // If the battle only takes into account the final boss, make it so the no_deaths_in_battle limitation only happens during that boss fight
+    if (first_boss_digimon == 0xffff){
+        achievement(title, description, points, (save_protection() && scan_data_obtainable() == 0x00 && giant_boss_defeated(boss_digimon, true, first_boss_digimon) && no_deaths_in_battle(boss_digimon)) && reset_in_alt(current_screen_ID() != boss_area))
+    }
+    else {
+        achievement(title, description, points, (save_protection() && scan_data_obtainable() == 0x00 && giant_boss_defeated(boss_digimon, true, first_boss_digimon) && no_deaths_in_battle()) && reset_in_alt(current_screen_ID() != boss_area))
+    }
 }
 
-function create_gaia_origin_achievement(title, description, points, extra_logic = always_true()) {
-    achievement(title, description, points, save_protection() && gaia_origin_defeated() && extra_logic && reset_in_alt(current_screen_ID() != boss_areas["Transfield Boss Area"]))
+function create_gaia_origin_achievement(title, description, points, extra_logic = always_true(), id = 0) {
+    achievement(title, description, points, save_protection() && gaia_origin_defeated() && extra_logic && reset_in_alt(current_screen_ID() != boss_areas["Transfield Boss Area"] && prev(current_screen_ID()) == boss_areas["Transfield Boss Area"]), id)
 }
 
 function create_gaia_origin_puttimon_achievement(title, description, points) {
@@ -4667,16 +4812,16 @@ function create_solo_win_achievement(title, description, points, target_digimon,
     achievement(title, description, points, save_protection() && digimon_defeated(target_digimon) && digimon_in_party(own_digimon))
 }
 
-function create_moveset_achievement(title, description, points, target_digimon, required_moveset, move_obtainable_last = false) {
-    achievement(title, description, points, save_protection() && check_moveset(target_digimon, required_moveset, move_obtainable_last))
+function create_moveset_achievement(title, description, points, target_digimon, required_moveset, last_move_obtainable = 0xffff) {
+    achievement(title, description, points, save_protection() && check_moveset(target_digimon, required_moveset, last_move_obtainable))
 }
 
 function create_digimon_owned_achievement(title, description, points, target_digimon) {
     achievement(title, description, points, save_protection() && check_digimon_owned(target_digimon))
 }
 
-function create_tamer_rank_challenge_achievement(title, points, rank, stat_limit) {
-    achievement(title, format("Beat the {0} Tamer Rank fight [No items in battle, HP/MP <= {1}, Stats <= {2}] (Traits and Equipments' stats count towards the limit)", rank, stat_limit * 10, stat_limit), points, save_protection() && tamer_rank() == tamer_ranks[rank] - 1 && tamer_rank_battle_check(rank) == 0x1 && bosses_defeated(tamer_rank_ids[tamer_ranks[rank] - 1], true) && no_deaths_in_battle() && unless(once(!stat_limits(stat_limit) && in_battle())) && reset_in_alt(current_screen_ID() != 0x120 && prev(current_screen_ID()) == 0x120)) // 0x120 = Colosseum Battle Area
+function create_tamer_rank_challenge_achievement(title, points, rank, extra_description = "", extra_logic = always_true()) {
+    achievement(title, format("Beat the {0} Tamer Rank fight {1}", rank, extra_description), points, save_protection() && tamer_rank() == tamer_ranks[rank] - 1 && tamer_rank_battle_check(rank) == 0x1 && trigger_when(bosses_defeated(tamer_rank_ids[tamer_ranks[rank] - 1], false)) && extra_logic)
 }
 
 function create_tamer_points_rewards_achievement(title, description, num_items){
@@ -4695,8 +4840,8 @@ create_story_achievement("A Thrilling Battle", 10, 7)
 create_story_achievement("A Dicy Meeting", 10, 8)
 create_story_achievement("Yesterday's Enemies are Today's Allies", 10, 9)
 create_game_beaten_achievement("Harmony Restored")
-create_game_beaten_achievement("I feel like I'm forgetting something... [m]", " without claiming your Digi-Farm", true, !digifarm_claimed())
-create_story_achievement("Prove your worth", 10, 11)
+create_game_beaten_achievement("I feel like I'm forgetting something...", " without claiming your Digi-Farm", !digifarm_claimed())
+create_story_achievement("Trial of the strongest", 10, 11)
 
 create_quest_achievement("Rookie Helper", "Completed 12 Quests", 5, 12)
 create_quest_achievement("Friend of Digimon", "Completed 24 Quests", 5, 24)
@@ -4722,7 +4867,7 @@ create_treasure_achievement("Shadow Abyss", 3, "Open all treasure chests in ")
 create_treasure_achievement("HighlightHaven", 3, "Open all treasure chests in ")
 
 create_digimon_achievement("Fake Agumon Expert", "Register 100 Digimon in the Digimon Gallery", 5, 100)
-create_digimon_achievement("Terriermon Assitant", "Register 200 Digimon in the Digimon Gallery", 10, 200)
+create_digimon_achievement("Terriermon Assistant", "Register 200 Digimon in the Digimon Gallery", 10, 200)
 create_digimon_achievement("Agumon Expert", "Register 300 Digimon in the Digimon Gallery", 10, 300)
 create_digimon_achievement("Digimon Researcher Kogure", "Register all 370 available Digimon in the Digimon Gallery", 25, 370)
 create_digimon_achievement("[Special] Researcher of the World of Dawn", "Register all 27 Digimon usually unavailable in Dusk in the Digimon Gallery", 10, 27, "Trade")
@@ -4732,42 +4877,53 @@ create_free_trial_achievement("Attack", ["BlackAgumon", "Goburimon", "SkullGreym
 create_free_trial_achievement("Defense", ["Keramon", "Tentomon", "Kurisarimon", "MegakabuterimonB"])
 create_free_trial_achievement("Pretty", ["Kumamon", "Palmon", "Pandamon", "Lillymon"])
 
-create_giant_boss_no_death_challenge_achievement("True Form Revealed [m]", "Defeat Grimmon [No deaths in battle]", 5, boss_digimon_ids["Grimmon"], boss_areas["Limit Valley Boss Area"])
-create_giant_boss_no_death_challenge_achievement("Besting the Terror of the Undead [m]", "Defeat SkullBaluchimon [No deaths in battle]", 10, boss_digimon_ids["SkullBaluchimon"], boss_areas["Loop Swamp Boss Area"])
-create_giant_boss_no_death_challenge_achievement("A Clash of Speed and Spirits [m]", "Defeat Mercurimon [No deaths in battle]", 10, boss_digimon_ids["Mercurimon"], boss_areas["Palette Amazon Boss Area"])
-create_giant_boss_no_death_challenge_achievement("Following the Path of the Samurai [m]", "Defeat Gaiomon in Thriller Ruins [No deaths in battle]", 10, boss_digimon_ids["Gaiomon"], boss_areas["Thriller Ruins Boss Area"])
-create_boss_no_death_challenge_achievement("The Misled Knight [m]", "Defeat ChaosGallantmon [No deaths in battle]", 10, [boss_digimon_ids["ChaosGallantmon"]], boss_areas["AccessGlacier Boss Area"])
-create_giant_boss_no_death_challenge_achievement("The King of Vampires, Dethroned [m]", "Defeat GranDracmon [No deaths in battle]", 10, boss_digimon_ids["GranDracmon"], boss_areas["Proxy Island Boss Area"])
-create_giant_boss_no_death_challenge_achievement("The Corrupted Archangel of Kindness [m]", "Defeat Ophanimon Core [No deaths in battle]", 10, boss_digimon_ids["OphanimonC"], boss_areas["Sunshine City Union Room"])
-create_giant_boss_no_death_challenge_achievement("The Real Master of Evolution [m]", "Defeat all of the final boss' forms [No deaths in battle]", 10, boss_digimon_ids["ExoGrimmon"], boss_areas["Chaos Brain Boss Area"], boss_digimon_ids["ChaosGrimmon"])
+create_giant_boss_no_death_challenge_achievement("True Form Revealed", "Defeat Grimmon [No deaths in battle]", 5, boss_digimon_ids["Grimmon"], boss_areas["Limit Valley Boss Area"])
+create_giant_boss_no_death_challenge_achievement("Besting the Terror of the Undead", "Defeat SkullBaluchimon [No deaths in battle]", 10, boss_digimon_ids["SkullBaluchimon"], boss_areas["Loop Swamp Boss Area"])
+create_giant_boss_no_death_challenge_achievement("A Clash of Speed and Spirits", "Defeat Mercurimon [No deaths in battle]", 10, boss_digimon_ids["Mercurimon"], boss_areas["Palette Amazon Boss Area"])
+create_giant_boss_no_death_challenge_achievement("Following the Path of the Samurai", "Defeat Gaiomon in Thriller Ruins [No deaths in battle]", 10, boss_digimon_ids["Gaiomon"], boss_areas["Thriller Ruins Boss Area"])
+create_boss_no_death_challenge_achievement("The Misled Knight", "Defeat ChaosGallantmon [No deaths in battle]", 10, [boss_digimon_ids["ChaosGallantmon"]], boss_areas["AccessGlacier Boss Area"])
+create_giant_boss_no_death_challenge_achievement("The King of Vampires, Dethroned", "Defeat GranDracmon [No deaths in battle]", 10, boss_digimon_ids["GranDracmon"], boss_areas["Proxy Island Boss Area"])
+create_giant_boss_no_death_challenge_achievement("The Corrupted Archangel of Kindness", "Defeat Ophanimon Core [No deaths in battle]", 10, boss_digimon_ids["OphanimonC"], boss_areas["Sunshine City Union Room"])
+create_giant_boss_no_death_challenge_achievement("The Real Master of Evolution", "Defeat all of the final boss' forms [No deaths in battle]", 10, boss_digimon_ids["ExoGrimmon"], boss_areas["Chaos Brain Boss Area"], boss_digimon_ids["ChaosGrimmon"])
 
-create_gaia_origin_achievement("Fighting fair and square [m]", "Defeat the Gaia Origin [HP/MP <= 5500, Stats <= 550, No deaths in battle]", 25, no_deaths_in_battle() && unless(once(!stat_limits(550) && in_battle())) && reset_in_alt(current_screen_ID() != prev(current_screen_ID())))
-create_gaia_origin_achievement("Night Crow's Strongest Tamer [m]", "Defeat the Gaia Origin with only Dianamon, Lotosmon and MirageGaogamon (Burst Mode) in your party", 10, digimon_in_party([digimon_ids["Dianamon"], digimon_ids["Lotosmon"], digimon_ids["MirageGaogamonBM"]], true) && reset_in_alt(current_screen_ID() != prev(current_screen_ID())))
-create_gaia_origin_puttimon_achievement("Developer Oversight [m]", "Defeat the Gaia Origin without obtaining Puttimon or the evolutions it unlocks", 5)
+create_gaia_origin_achievement("Proving your worth", "Defeat the Gaia Origin [No deaths in battle]", 10, no_deaths_in_battle(), 368146)
+create_gaia_origin_achievement("Night Crow's Strongest Tamer", "Defeat the Gaia Origin with only Dianamon, Lotosmon and MirageGaogamon (Burst Mode) in your party", 10, digimon_in_party([digimon_ids["Dianamon"], digimon_ids["Lotosmon"], digimon_ids["MirageGaogamonBM"]], true))
+create_gaia_origin_puttimon_achievement("Developer Oversight", "Defeat the Gaia Origin without obtaining Puttimon or the evolutions it unlocks", 5)
 
-achievement("Best of the best... almost!", "Achieve Platinum Tamer Rank", 10, save_protection() && tamer_rank() == tamer_ranks["Platinum"] && prev(tamer_rank()) == tamer_ranks["Platinum"] - 1)
+// ACHIEVEMENT IDEAS
+// Bronze: Paildramon & Dinobeemon
+// Silver: Datamon, Kimeramon and RedVegiemon, no deaths
+// Gold: Antylamon only
+// Platinum: no deaths, no items
+// Platinum (Ideal): no deaths, using only Dark/Earth/Thunder/Steel attacks
+// Legend: BeelzemonBM, no items
+// Legend (Ideal): BeelzemonBM, no items, using only Dark/Earth attacks
+// Gaia Origin: no deaths
+// Gaia Origin (Ideal): no deaths, using only Dark/Earth attacks
+
+achievement("Best of the best... almost!", "Achieve Platinum Tamer Rank", 10, save_protection() && tamer_rank() == tamer_ranks["Platinum"] && prev(tamer_rank()) == tamer_ranks["Platinum"] - 1 && current_screen_ID() == boss_areas["Coliseum Battle Area"])
 create_story_achievement("[Special] The Birth of a New Legend", 10, 12)
-create_tamer_rank_challenge_achievement("Azulongmon would be proud [m]", 5, "Bronze", 100)
-create_tamer_rank_challenge_achievement("Ebonwumon would be proud [m]", 5, "Silver", 150)
-create_tamer_rank_challenge_achievement("Baihumon would be proud [m]", 10, "Gold", 300)
-create_tamer_rank_challenge_achievement("Zhuqiaomon would be proud [m]", 25, "Platinum", 700)
-create_tamer_rank_challenge_achievement("[Special] Master of the Multiverse [m]", 25, "Legend", 850)
+create_tamer_rank_challenge_achievement("Azulongmon would be proud", 10, "Bronze", "with only Paildramon and Dinobeemon in your party", digimon_in_party([digimon_ids["Paildramon"], digimon_ids["Dinobeemon"]]) && current_screen_ID() == boss_areas["Coliseum Battle Area"])
+create_tamer_rank_challenge_achievement("Ebonwumon would be proud", 10, "Silver", "with only Datamon, Kimeramon and RedVeggiemon in your party [No deaths in battle]", digimon_in_party([digimon_ids["RedVeggiemon"], digimon_ids["Datamon"], digimon_ids["Kimeramon"]]) && no_deaths_in_battle() && reset_in_alt(current_screen_ID() != boss_areas["Coliseum Battle Area"] && prev(current_screen_ID()) == boss_areas["Coliseum Battle Area"]))
+create_tamer_rank_challenge_achievement("Baihumon would be proud", 10, "Gold", "with only Antylamon in your party", digimon_in_party([digimon_ids["Antylamon"]]) && current_screen_ID() == boss_areas["Coliseum Battle Area"])
+create_tamer_rank_challenge_achievement("Zhuqiaomon would be proud", 10, "Platinum", "[No deaths in battle, No items in battle]", no_deaths_in_battle() && no_items_in_battle() && reset_in_alt(current_screen_ID() != boss_areas["Coliseum Battle Area"] && prev(current_screen_ID()) == boss_areas["Coliseum Battle Area"]))
+create_tamer_rank_challenge_achievement("[Special] Master of the Multiverse", 25, "Legend", "with only Beelzemon (Blast Mode) in your party [No items in battle]", digimon_in_party([digimon_ids["BeelzemonBM"]], true) && no_items_in_battle() && reset_in_alt(current_screen_ID() != boss_areas["Coliseum Battle Area"] && prev(current_screen_ID()) == boss_areas["Coliseum Battle Area"]))
 
 create_solo_win_achievement("Partners Till the End", "Defeat a wild Armageddemon in Magnet Mine with only Lunamon in your party", 10, digimon_ids["Armageddemon"], [digimon_ids["Lunamon"]])
 create_solo_win_achievement("Baby Flame!", "Defeat a wild Argomon (Ultimate) in Thriller Ruins with only an Agumon in your party", 10, digimon_ids["ArgomonU"], [digimon_ids["Agumon"]])
 
 create_digimon_owned_achievement("[Special] Parallel World Dwellers", "Have Chibomon, Sunmon, Guilmon, Kudamon, DotAgumon, Airdramon and DotShineGreymon in your Digimon List", 5, [digimon_ids["Chibomon"], digimon_ids["Sunmon"], digimon_ids["Guilmon"], digimon_ids["Kudamon"], digimon_ids["DotAgumon"], digimon_ids["Airdramon"], digimon_ids["DotShineGreymon"]])
 
-create_moveset_achievement("I'll become the Digimon Master", "Have a Yanmamon with 4 of the following attacks: Poison Powder, Blizzard, Air Cutter, Mind Reader, Nightmare, Shadow Claw or Thunder", 10, digimon_ids["Yanmamon"], [0xb0, 0x6, 0x18, 0xa6, 0x88, 0x7e, 0x54])
-create_moveset_achievement("MagnaSusanoomon", "Obtain a Susanoomon with the attacks Royal Cannon, Glory Thunder, Demon Blast and OmegaR Force", 50, digimon_ids["Susanoomon"], [0x37, 0x56, 0x78, 0x4d])
-create_moveset_achievement("Sin of Wrath: Dusk", "Have a Creepymon with the attacks: Electric Rage, RagingMachine, Raging Beast and RagingDarkness", 25, digimon_ids["Creepymon"], [0x99, 0x98, 0x97, 0x96])
+create_moveset_achievement("I'll become the Digimon Master", "Have a Yanmamon with the attacks Poison Powder, Air Cutter, Nightmare and Shadow Claw", 10, digimon_ids["Yanmamon"], [0xb0, 0x18, 0x88, 0x7e])
+create_moveset_achievement("MagnaSusanoomon", "Obtain a Susanoomon with the attacks Royal Cannon, Glory Thunder, Demon Blast and OmegaR Force", 50, digimon_ids["Susanoomon"], [0x37, 0x56, 0x78, 0x4d], 0x56)
+create_moveset_achievement("Sin of Wrath: Dusk", "Have a Creepymon with the attacks Electric Rage, RagingMachine, Raging Beast and RagingDarkness", 25, digimon_ids["Creepymon"], [0x99, 0x98, 0x97, 0x96])
 create_moveset_achievement("When the Sun and the Moon come together...", "Have a Dianamon with the attacks Burst Counter, Fatal Hand, Fatal Cross and Burst Breath", 50, digimon_ids["Dianamon"], [0xac, 0x40, 0x3d, 0x22])
 
 create_tamer_points_rewards_achievement("Rewards for a Helpful Tamer", "Get all available items from Darkdramon", 5)
 create_tamer_points_rewards_achievement("[Special] Rewards from Beyond", "Get the final 2 items from Darkdramon usually unavailable in game", 7)
 
 achievement("Digi-Farming is my Passion", "Buy all Expansions and Boards for all 4 of your Digi-Farms", 5, save_protection() && check_all_digifarm_maxed())
-achievement("Coming to an agreement [m]", "Pay GranDracmon for their services and obtain the Kowloon Blade", 1, save_protection() && once(prev(proxy_island_gaiomon_defeated) == 0 && proxy_island_gaiomon_defeated == 1) && never(current_screen_ID() != 0x1ad) && check_equipment_obtained(equipment_ids["Kowloon Blade"])) // 0x1ad = Proxy Island boss area
+achievement("Coming to an agreement", "Pay GranDracmon for their services and obtain the Kowloon Blade", 1, save_protection() && once(prev(proxy_island_gaiomon_defeated) == 0 && proxy_island_gaiomon_defeated == 1) && never(current_screen_ID() != 0x1ad) && check_equipment_obtained(equipment_ids["Kowloon Blade"])) // 0x1ad = Proxy Island boss area
 achievement("Hacking into the Matrix", "Get all password rewards from Valkyrimon", 1, save_protection() && prev(count_passwords()) == 3 && measured(count_passwords() == 4))
 achievement("Arrow of Artemis", "Deal 9999 damage in 1 hit", 5, save_protection() && in_battle() && top_damage() == 9999 && prev(top_damage()) < 9999)
 achievement("DNA Digivolve to...!", "DNA digivolve a Digimon for the first time", 3, save_protection() && in_special_evolution_menu(true) && has_dna_evolved())
@@ -4779,7 +4935,7 @@ achievement("Nothing Can Faze Me!", "Have a Digimon with all resistances at 800 
 //////////////////////////////
 // - LEADERBOARD CREATION
 leaderboard("Fastest Hero", "Beat the game as fast as possible", save_protection() && story_checkpoints["Before Game Beaten"] == 1 && story_checkpoints["Game Beaten"] == 0, !save_protection(), giant_boss_defeated(boss_digimon_ids["ExoGrimmon"]), in_game_time() * 1.5625, format = "MILLISECS", lower_is_better = true)
-leaderboard("Fastest Gaia Origin Slayer", "Beat the Gaia Origin as fast as possible", save_protection() && story_checkpoints["Gaia Origin Started"] == 1 && story_checkpoints["Gaia Origin Defeated"] == 0, !save_protection(), digimon_defeated(digimon_ids["GallantmonCM"]), in_game_time() * 1.5625, format = "MILLISECS", lower_is_better = true)
+leaderboard("Fastest Gaia Origin Slayer", "Beat the Gaia Origin as fast as possible", save_protection() && story_checkpoints["Gaia Origin Started"] == 1 && story_checkpoints["Gaia Origin Defeated"] == 0, !save_protection(), digimon_defeated(boss_digimon_ids["GallantmonCM"]), in_game_time() * 1.5625, format = "MILLISECS", lower_is_better = true)
 //leaderboard("Researcher Kogure Speedrun", "Register all available Digimon in the Digimon Gallery as fast as possible (Trade/Dawn-Exclusive Digimon not required)", save_protection() && prev(count_digimon(digimon_list)) < 367, always_false(), count_digimon(digimon_list) == 367, in_game_time() * 1.5625, format = "MILLISECS", lower_is_better = true)
 //leaderboard("True Researcher Kogure Speedrun", "Register every Digimon in the Digimon Gallery as fast as possible", save_protection() && prev(count_digimon(digimon_list, "All")) < 397, always_false(), count_digimon(digimon_list, "All") == 397, in_game_time() * 1.5625, format = "MILLISECS", lower_is_better = true)
 leaderboard("No Use for Weaklings", "Beat the game registering as few Digimon as possible in the Digimon Gallery", save_protection() && story_checkpoints["Before Game Beaten"] == 1 && story_checkpoints["Game Beaten"] == 0, !save_protection(), giant_boss_defeated(boss_digimon_ids["ExoGrimmon"]), count_digimon(digimon_list, "All"), format = "VALUE", lower_is_better = true)
