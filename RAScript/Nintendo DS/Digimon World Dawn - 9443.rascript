@@ -4375,7 +4375,7 @@ function digimon_in_party(digimon_ids, check_once = false) {
         single_digimon_logic = always_false()
         // Then, loop to check for each party slot, which should always be the same as the number of Digimon, as they're filled in order
         for j in range (0, length(digimon_ids) - 1) {
-            single_digimon_logic = single_digimon_logic || word(first_party_digimon_inbattle + party_digimon_inbattle_offsets["ID"] + party_digimon_inbattle_offsets["Next Digimon"] * j) == digimon_ids[i]
+            single_digimon_logic = __ornext(single_digimon_logic || word(first_party_digimon_inbattle + party_digimon_inbattle_offsets["ID"] + party_digimon_inbattle_offsets["Next Digimon"] * j) == digimon_ids[i])
         }
         if(check_once == true){
             single_digimon_logic = once(single_digimon_logic)
