@@ -4742,7 +4742,7 @@ function check_all_digifarm_maxed() {
     for i in range (0, 3) {
         current_digifarm = first_digifarm_address + digifarm_offsets["Next Digifarm"] * i
         owned_this_frame = owned_this_frame && count_farm_boards(current_digifarm) == 24 && byte(current_digifarm + digifarm_offsets["DPU"]) == 8 && byte(current_digifarm + digifarm_offsets["Memory"]) == 32
-        owned_last_frame = owned_last_frame || count_farm_boards(current_digifarm) == 23 || prev(byte(current_digifarm + digifarm_offsets["DPU"])) == 7 || prev(byte(current_digifarm + digifarm_offsets["Memory"])) == 24
+        owned_last_frame = owned_last_frame || prev(count_farm_boards(current_digifarm)) == 23 || prev(byte(current_digifarm + digifarm_offsets["DPU"])) == 7 || prev(byte(current_digifarm + digifarm_offsets["Memory"])) == 24
     }
     return owned_this_frame && owned_last_frame
 }
