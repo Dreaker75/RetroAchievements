@@ -948,7 +948,7 @@ digimon_ids = {
 // $135C66: 1st Attack ID [16 bits]
 //          0x0 = Charge (Equip Technique)
 //          0x1 = Frothy Spit (Special Technique)
-//          
+//
 //          Equip Techniques
 //          0x2 = Ice Blast
 //          0x3 = Big Ice Blast
@@ -1144,7 +1144,7 @@ digimon_ids = {
 //          0xc1 = Cure Poison
 //          0xc2 = Purification
 //          0xc3 = Nanomech Heal
-//          
+//
 //          Special Techniques
 //          0xc4 = Kusanagi
 //          0xc6 = Full Bloom
@@ -1414,7 +1414,7 @@ digifarm_offsets = {
 //          0x0015 = The Final Battle
 //          0x0016 = Gaia Origin Challenge
 //          0x0017 = The Legendary Tamer
-//          
+//
 //          Dark Quests
 //          0x003d = Find the Pink Lipstick
 //          0x003e = Refreshing DigiJuice
@@ -1424,7 +1424,7 @@ digifarm_offsets = {
 //          0x0042 = Stop the Duel
 //          0x0043 = Gorgeous Nuts
 //          0x0044 = Cancel the Duel
-//          
+//
 //          Machine Quests
 //          0x0045 = Find the Iron Pillow
 //          0x0046 = Water Goggles
@@ -1435,7 +1435,7 @@ digifarm_offsets = {
 //          0x004b = The Combat Game
 //          0x004c = DigiPendant of Love
 //          0x004d = Airdramon's Data
-//          
+//
 //          Insect/Plant Quests
 //          0x004e = Find an L-Mushroom
 //          0x004f = Drimogemon the Digger
@@ -1446,7 +1446,7 @@ digifarm_offsets = {
 //          0x0054 = Minervamon Challenge
 //          0x0055 = The Flower Bulb
 //          0x0056 = The Stolen Cards
-//          
+//
 //          Beast Quests
 //          0x0057 = Red Shoe Material
 //          0x0058 = Interesting DigiComic
@@ -1457,7 +1457,7 @@ digifarm_offsets = {
 //          0x005d = The Armor Knuckle
 //          0x005e = The Ultimate Cuisine
 //          0x005f = The 3 Great Demons
-//          
+//
 //          0xffff = No Quest selected
 function active_quest() => word(0x139A0C)
 
@@ -1607,7 +1607,7 @@ story_checkpoints = {
 //          Bit7 = Step 1 (Talked to Pagumon in Dark Plaza)
 // $13A20D: Bit5 = Step 2 (Talked to Tsukaimon in Thriller Ruins)
 //          Bit6 = Step 3 (Talked to Pagumon in Dark Plaza)
-//          Bit7 = Step 4 (Reward claimed) If this bit is on, the Quest registers as cleard and can't be started
+//          Bit7 = Step 4 (Reward claimed) If this bit is on, the Quest registers as cleared and can't be started
 //          --------------------------------------------------------------
 // $13A20E: --------------------------------------
 //          Find the Pink Lipstick - Dark
@@ -2834,7 +2834,7 @@ digimon_list = {
     "Botamon":{"obtained_address":bit4(0x13A284), "seen_address":bit0(0x13A2C3), "obtainable":true},
     "Sunmon":{"obtained_address":bit5(0x13A284), "seen_address":bit1(0x13A2C3), "obtainable":false},
     "Moonmon":{"obtained_address":bit6(0x13A284), "seen_address":bit2(0x13A2C3), "obtainable":true},
-    
+
     "Monodramon":{"obtained_address":bit0(0x13A286), "seen_address":bit4(0x13A2C4), "obtainable":true},
     "Agumon":{"obtained_address":bit1(0x13A286), "seen_address":bit5(0x13A2C4), "obtainable":true},
     "Veemon":{"obtained_address":bit2(0x13A286), "seen_address":bit6(0x13A2C4), "obtainable":true},
@@ -3272,7 +3272,7 @@ DotFalcomon_password = bit1(0x13A335)
 
 // $13A354: Password inputted flags
 //          These bits are just for visual feedback, they don't actually prevent or allow for the obtaining of the rewards, that is handled in the other Password-related memory
-//          
+//
 //          Bit1 = DotMirageGaogamon
 //          Bit2 = Legendary equipment set
 //          Bit3 = Sukamon
@@ -4091,7 +4091,7 @@ enemy_digimon_info_offsets = {
 
 // $25ABAC: Digimon ID [16 bits]
 //          Includes the IDs for all regular Digimon, plus the following special Digimon used as Bosses in different parts of the game:
-//          
+//
 //          0x1f9 = Ophanimon Core
 //          0x1ff = ChaosGrimmon
 //          0x202 = ExoGrimmon
@@ -4101,7 +4101,7 @@ enemy_digimon_info_offsets = {
 //          0x212 = Gaiomon
 //          0x22b = Grimmon
 //          0x23c = ChaosGallantmon
-//          
+//
 //          Gaia Origin Challenge
 //          0x23d = Sleipmon
 //          0x23e = Duftmon
@@ -4112,13 +4112,13 @@ enemy_digimon_info_offsets = {
 //          0x243 = Omnimon
 //          0x244 = BeelzemonBM
 //          0x245 = GallantmonCM
-//          
+//
 //          0x2a8 = Seasarmon (Grimmon MiniBoss)
 //          0x2b0 = Fugamon (Mercurimon MiniBoss)
 //          0x2b2 = Tsukaimon (Gaiomon MiniBoss)
 //          0x2b3 = Gaiomon (Before GranDracmon Boss)
 //          0x2b9 = GranDracmon
-//          
+//
 //          Tamer Rank fights
 //          0x2dc = Apollomon (Legendary Battle 1)
 //          0x2dd = ShineGreymon (Legendary Battle 1)
@@ -4443,7 +4443,7 @@ function chests_opened(location){
         total_to_open = total_to_open + 1
         }
     }
-    
+
     return opened_last_frame == total_to_open - 1 && measured(opened_this_frame == total_to_open)
 }
 
@@ -4620,7 +4620,7 @@ function digimon_defeated(digimon_id) {
 function has_dna_evolved() {
     // Because of how the DNA evolution works, the first digimon chosen will transform into the DNA objective after the DNA is performed, so we need to check the previous value when comparing to the result digimon so it compares the Digimon before it evolves
     first_digimon_chosen = dword(base_dna_armor_digimon() + digimon_stats_offsets["Species ID"])
-    
+
     // We substract the Digimon obtained from the first Digimon instead of comparing if they're equal so RATools generates the code correctly
     // The last check to compare if the first Digimon pointer is the same is because it goes back to 0 for a few frames when backing out of a menu
     return prev(first_digimon_chosen) - dna_armor_digimon_obtained() != 0 && first_digimon_chosen - dna_armor_digimon_obtained() == 0 && base_dna_armor_digimon() == prev(base_dna_armor_digimon())
@@ -4637,11 +4637,11 @@ function has_moves(digimon_address, target_digimon, move_list, last_move_obtaina
 
     // Make sure the current Digimon is the target Digimon
     logic = logic && word(digimon_address + digimon_stats_offsets["Species ID"]) == target_digimon
-    
+
     // Check whether the Digimon has been evolved last frame. This can always be the last condition to change unless the achievement asks for 4 moves the Digimon can learn
     prev_logic = prev_logic || prev(word(digimon_address + digimon_stats_offsets["Species ID"])) != target_digimon
 
-    // Check that all the moves in the move_list show up in any of the 4 move slots (Works as long as the achievement asks for exactly 4 attacks. For more moves the logic would have to be changed)    
+    // Check that all the moves in the move_list show up in any of the 4 move slots (Works as long as the achievement asks for exactly 4 attacks. For more moves the logic would have to be changed)
     for move in move_list {
         logic = logic && __ornext(move == move1 || move == move2 || move == move3 || move == move4)
     }
@@ -4670,7 +4670,7 @@ function check_digimon_owned(target_digimon) {
         }
         logic = logic && digimon_logic
     }
-    
+
     for i in range(0, 39) {
         delta_logic = delta_logic || word(first_digimon_address + digimon_stats_offsets["Next Digimon"] * i + digimon_stats_offsets["Species ID"]) != prev(word(first_digimon_address + digimon_stats_offsets["Next Digimon"] * i + digimon_stats_offsets["Species ID"]))
     }
@@ -4761,9 +4761,15 @@ function check_equipment_obtained(equipment_ID) {
 
 //////////////////////////////
 // - ACHIEVEMENTS CREATION FUNCTION
-function create_story_achievement(title, points, quest_number) {
+function create_story_achievement(title, points, quest_number, is_first_story_achievement = false) {
     quest_to_check = quest_list["union" + quest_number]
-    achievement(title, format("Complete the \"{0}\" Quest", quest_to_check["Name"]), points, save_protection() && quest_to_check["Last Step"] == 1 && quest_to_check["Reward Claimed"] > prev(quest_to_check["Reward Claimed"]) && prev(active_quest()) == quest_to_check["ID"] && active_quest() == 0xffff)
+    if (is_first_story_achievement == true){
+        // Uses quests_completed() instead to try to circumvent the issue of the second quest achievement not working. There is a possibility that because the first 2 Union Quests work differently than the others, the memory might behave differently. Still haven't been able to pinpoint what the exact issue is
+        achievement(title, format("Complete the \"{0}\" Quest", quest_to_check["Name"]), points, save_protection() && quests_completed() == 2 && prev(active_quest()) == quest_to_check["ID"] && active_quest() == 0xffff)
+    }
+    else {
+        achievement(title, format("Complete the \"{0}\" Quest", quest_to_check["Name"]), points, save_protection() && quest_to_check["Last Step"] == 1 && quest_to_check["Reward Claimed"] > prev(quest_to_check["Reward Claimed"]) && prev(active_quest()) == quest_to_check["ID"] && active_quest() == 0xffff)
+    }
 }
 
 function create_game_beaten_achievement(title, description = "", extra_logic = always_true()) {
@@ -4831,7 +4837,7 @@ function create_tamer_points_rewards_achievement(title, description, num_items){
 
 //////////////////////////////
 // - ACHIEVEMENTS CREATION
-create_story_achievement("Through the Sewers", 5, 2)
+create_story_achievement("Through the Sewers", 5, 2, true)
 create_story_achievement("A Grim Situation", 5, 3)
 create_story_achievement("Dizzying Waters", 10, 4)
 create_story_achievement("Something's amiss...", 10, 5)
