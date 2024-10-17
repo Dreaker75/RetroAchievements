@@ -4460,19 +4460,19 @@ function count_digimon(digimon_to_count, digimon_to_check = "In-Game", type = "o
 }
 
 // boss_id is for when a giant boss has a mini-boss fight before them, so the limitations apply only to the boss
-function no_deaths_in_battle(boss_id = 0xffff) {
+function no_deaths_in_battle(area_id, boss_id = 0xffff) {
     logic = always_true()
 
     for i in range (0, 5) {
         current_digimon = first_party_digimon_inbattle + party_digimon_inbattle_offsets["Next Digimon"] * i
         if(boss_id == 0xffff){
             // We need to check if there is a Digimon in the current slot first before we check if someone has died, which is what the 0xff comparison is for
-            logic = logic && disable_when(in_battle() && scan_data_obtainable() == 0x00 && byte(current_digimon) != 0xff && dword(current_digimon + party_digimon_inbattle_offsets["Curr HP"]) == 0)
+            logic = logic && disable_when(in_battle() && scan_data_obtainable() == 0x00 && current_screen_ID() == area_id && byte(current_digimon) != 0xff && dword(current_digimon + party_digimon_inbattle_offsets["Curr HP"]) == 0)
         }
         else {
         // Check the second Digimon because that's the main part for giant Digimon
         enemyID = first_enemy_digimon + enemy_digimon_info_offsets["Next Digimon"] + enemy_digimon_info_offsets["ID"]
-            logic = logic && disable_when(in_battle() && scan_data_obtainable() == 0x00 && word(enemyID) == boss_id && byte(current_digimon) != 0xff && dword(current_digimon + party_digimon_inbattle_offsets["Curr HP"]) == 0)
+            logic = logic && disable_when(in_battle() && scan_data_obtainable() == 0x00 && word(enemyID) == boss_id && current_screen_ID() == area_id && byte(current_digimon) != 0xff && dword(current_digimon + party_digimon_inbattle_offsets["Curr HP"]) == 0)
         }
     }
 
@@ -4480,14 +4480,14 @@ function no_deaths_in_battle(boss_id = 0xffff) {
 }
 
 // boss_id is for when a giant boss has a mini-boss fight before them, so the limitations don't apply to that fight
-function no_items_in_battle(boss_id = 0xffff) {
+function no_items_in_battle(boss_area, boss_id = 0xffff) {
     if (boss_id == 0xffff){
-        return disable_when(in_battle() && scan_data_obtainable() == 0x00 && prev(in_battle_selection_state()) == item_state && in_battle_selection_state() == accepted_state)
+        return disable_when(in_battle() && scan_data_obtainable() == 0x00 && current_screen_ID() == boss_area && prev(in_battle_selection_state()) == item_state && in_battle_selection_state() == accepted_state)
     }
     else {
         // Check the second Digimon because that's the main part for giant Digimon
         enemyID = first_enemy_digimon + enemy_digimon_info_offsets["Next Digimon"] + enemy_digimon_info_offsets["ID"]
-        return disable_when(in_battle() && scan_data_obtainable() == 0x00 && word(enemyID) == boss_id && prev(in_battle_selection_state()) == item_state && in_battle_selection_state() == accepted_state)
+        return disable_when(in_battle() && scan_data_obtainable() == 0x00 && word(enemyID) == boss_id && current_screen_ID() == boss_area && prev(in_battle_selection_state()) == item_state && in_battle_selection_state() == accepted_state)
     }
 }
 
@@ -4539,6 +4539,12 @@ function giant_boss_defeated(boss_id, trigger = false, first_boss = 0xffff) {
 function gaia_origin_defeated(){
     logic = story_checkpoints["Gaia Origin Defeated"] == 0 && trigger_when(scan_data_obtainable() == 0x00)
     return logic && once(in_battle() && check_enemy_digimon(gaia_origin_ids[0][0])) && trigger_when(bosses_defeated(gaia_origin_ids[length(gaia_origin_ids) - 1], false))
+}
+
+// Called during the Tamer Rank quests, to make sure the trigger icon shows properly
+// - area_id is the ID of the area that will reset the achievement as soon as the player leaves it
+function reset_achievement_when_leaving_area(area_id){
+    return reset_in_alt(current_screen_ID() != area_id && prev(current_screen_ID()) == area_id)
 }
 
 function stat_limits(amount, hp_mp_stats, atk_def_spt_spd_stats) {
@@ -4793,21 +4799,21 @@ function create_free_trial_achievement(pack, pack_digimon) {
 }
 
 function create_boss_no_death_challenge_achievement(title, description, points, boss_digimon, boss_area) {
-    achievement(title, description, points, (save_protection() && scan_data_obtainable() == 0x00 && bosses_defeated(boss_digimon, true) && no_deaths_in_battle()) && reset_in_alt(current_screen_ID() != boss_area))
+    achievement(title, description, points, (save_protection() && scan_data_obtainable() == 0x00 && bosses_defeated(boss_digimon, true) && no_deaths_in_battle(boss_area)) && reset_in_alt(current_screen_ID() != boss_area))
 }
 
 function create_giant_boss_no_death_challenge_achievement(title, description, points, boss_digimon, boss_area, first_boss_digimon = 0xffff) {
     // If the battle only takes into account the final boss, make it so the no_deaths_in_battle limitation only happens during that boss fight
     if (first_boss_digimon == 0xffff){
-        achievement(title, description, points, (save_protection() && scan_data_obtainable() == 0x00 && giant_boss_defeated(boss_digimon, true, first_boss_digimon) && no_deaths_in_battle(boss_digimon)) && reset_in_alt(current_screen_ID() != boss_area))
+        achievement(title, description, points, (save_protection() && scan_data_obtainable() == 0x00 && giant_boss_defeated(boss_digimon, true, first_boss_digimon) && no_deaths_in_battle(boss_area, boss_digimon)) && reset_in_alt(current_screen_ID() != boss_area))
     }
     else {
-        achievement(title, description, points, (save_protection() && scan_data_obtainable() == 0x00 && giant_boss_defeated(boss_digimon, true, first_boss_digimon) && no_deaths_in_battle()) && reset_in_alt(current_screen_ID() != boss_area))
+        achievement(title, description, points, (save_protection() && scan_data_obtainable() == 0x00 && giant_boss_defeated(boss_digimon, true, first_boss_digimon) && no_deaths_in_battle(boss_area)) && reset_in_alt(current_screen_ID() != boss_area))
     }
 }
 
 function create_gaia_origin_achievement(title, description, points, extra_logic = always_true(), id = 0) {
-    achievement(title, description, points, save_protection() && gaia_origin_defeated() && extra_logic && reset_in_alt(current_screen_ID() != boss_areas["Transfield Boss Area"] && prev(current_screen_ID()) == boss_areas["Transfield Boss Area"]), id)
+    achievement(title, description, points, save_protection() && gaia_origin_defeated() && extra_logic && reset_in_alt(current_screen_ID() != boss_areas["Transfield Boss Area"]), id)
 }
 
 function create_gaia_origin_puttimon_achievement(title, description, points) {
@@ -4892,7 +4898,7 @@ create_giant_boss_no_death_challenge_achievement("The King of Vampires, Dethrone
 create_giant_boss_no_death_challenge_achievement("The Corrupted Archangel of Kindness", "Defeat Ophanimon Core [No deaths in battle]", 10, boss_digimon_ids["OphanimonC"], boss_areas["Sunshine City Union Room"])
 create_giant_boss_no_death_challenge_achievement("The Real Master of Evolution", "Defeat all of the final boss' forms [No deaths in battle]", 10, boss_digimon_ids["ExoGrimmon"], boss_areas["Chaos Brain Boss Area"], boss_digimon_ids["ChaosGrimmon"])
 
-create_gaia_origin_achievement("Proving your worth", "Defeat the Gaia Origin [No deaths in battle]", 10, no_deaths_in_battle(), 368146)
+create_gaia_origin_achievement("Proving your worth", "Defeat the Gaia Origin [No deaths in battle]", 10, no_deaths_in_battle(boss_areas["Transfield Boss Area"]), 368146)
 create_gaia_origin_achievement("Night Crow's Strongest Tamer", "Defeat the Gaia Origin with only Dianamon, Lotosmon and MirageGaogamon (Burst Mode) in your party", 10, digimon_in_party([digimon_ids["Dianamon"], digimon_ids["Lotosmon"], digimon_ids["MirageGaogamonBM"]], true))
 create_gaia_origin_puttimon_achievement("Developer Oversight", "Defeat the Gaia Origin without obtaining Puttimon or the evolutions it unlocks", 5)
 
@@ -4910,10 +4916,10 @@ create_gaia_origin_puttimon_achievement("Developer Oversight", "Defeat the Gaia 
 achievement("Best of the best... almost!", "Achieve Platinum Tamer Rank", 10, save_protection() && tamer_rank() == tamer_ranks["Platinum"] && prev(tamer_rank()) == tamer_ranks["Platinum"] - 1 && current_screen_ID() == boss_areas["Coliseum Battle Area"])
 create_story_achievement("[Special] The Birth of a New Legend", 10, 12)
 create_tamer_rank_challenge_achievement("Azulongmon would be proud", 10, "Bronze", "with only Paildramon and Dinobeemon in your party", digimon_in_party([digimon_ids["Paildramon"], digimon_ids["Dinobeemon"]]) && current_screen_ID() == boss_areas["Coliseum Battle Area"])
-create_tamer_rank_challenge_achievement("Ebonwumon would be proud", 10, "Silver", "with only Datamon, Kimeramon and RedVeggiemon in your party [No deaths in battle]", digimon_in_party([digimon_ids["RedVeggiemon"], digimon_ids["Datamon"], digimon_ids["Kimeramon"]]) && no_deaths_in_battle() && reset_in_alt(current_screen_ID() != boss_areas["Coliseum Battle Area"] && prev(current_screen_ID()) == boss_areas["Coliseum Battle Area"]))
+create_tamer_rank_challenge_achievement("Ebonwumon would be proud", 10, "Silver", "with only Datamon, Kimeramon and RedVeggiemon in your party [No deaths in battle]", digimon_in_party([digimon_ids["RedVeggiemon"], digimon_ids["Datamon"], digimon_ids["Kimeramon"]]) && no_deaths_in_battle(boss_areas["Coliseum Battle Area"]) && reset_achievement_when_leaving_area(boss_areas["Coliseum Battle Area"]))
 create_tamer_rank_challenge_achievement("Baihumon would be proud", 10, "Gold", "with only Antylamon in your party", digimon_in_party([digimon_ids["Antylamon"]]) && current_screen_ID() == boss_areas["Coliseum Battle Area"])
-create_tamer_rank_challenge_achievement("Zhuqiaomon would be proud", 10, "Platinum", "[No deaths in battle, No items in battle]", no_deaths_in_battle() && no_items_in_battle() && reset_in_alt(current_screen_ID() != boss_areas["Coliseum Battle Area"] && prev(current_screen_ID()) == boss_areas["Coliseum Battle Area"]))
-create_tamer_rank_challenge_achievement("[Special] Master of the Multiverse", 25, "Legend", "with only Beelzemon (Blast Mode) in your party [No items in battle]", digimon_in_party([digimon_ids["BeelzemonBM"]], true) && no_items_in_battle() && reset_in_alt(current_screen_ID() != boss_areas["Coliseum Battle Area"] && prev(current_screen_ID()) == boss_areas["Coliseum Battle Area"]))
+create_tamer_rank_challenge_achievement("Zhuqiaomon would be proud", 10, "Platinum", "[No deaths in battle, No items in battle]", no_deaths_in_battle(boss_areas["Coliseum Battle Area"]) && no_items_in_battle(boss_areas["Coliseum Battle Area"]) && reset_achievement_when_leaving_area(boss_areas["Coliseum Battle Area"]))
+create_tamer_rank_challenge_achievement("[Special] Master of the Multiverse", 25, "Legend", "with only Beelzemon (Blast Mode) in your party [No items in battle]", digimon_in_party([digimon_ids["BeelzemonBM"]], true) && no_items_in_battle(boss_areas["Coliseum Battle Area"]) && reset_achievement_when_leaving_area(boss_areas["Coliseum Battle Area"]))
 
 create_solo_win_achievement("Partners Till the End", "Defeat a wild Armageddemon in Magnet Mine with only Lunamon in your party", 10, digimon_ids["Armageddemon"], [digimon_ids["Lunamon"]])
 create_solo_win_achievement("Baby Flame!", "Defeat a wild Argomon (Ultimate) in Thriller Ruins with only an Agumon in your party", 10, digimon_ids["ArgomonU"], [digimon_ids["Agumon"]])
